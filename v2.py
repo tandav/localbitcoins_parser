@@ -65,13 +65,19 @@ while True:
 
     mean_global = d.mean().mean()
     std_global = d.std().mean()
+    max_global = d.max().max()
+    min_global = d.min().min()
+
+    y_low  = max(mean_global - YLIM * std_global, min_global)
+    y_high = min(mean_global + YLIM * std_global, max_global)
 
     ax = d.interpolate(limit_area='inside').plot(figsize=(16, 10), legend=False, marker=None, linestyle='-', linewidth=0.9)
     ax.xaxis.set_major_formatter(DATE_FORMAT)
     ax.yaxis.set_major_formatter(PRICE_FORMAT)
     mean.plot(color='black', marker=',', linestyle='-', linewidth=3)
     plt.fill_between(std.index, mean - std, mean + std, color='grey', alpha=.1, zorder=-1)
-    plt.ylim(mean_global - YLIM * std_global, mean_global + YLIM * std_global)
+    plt.ylim(y_low, y_high)
+
     plt.grid(lw=0.3)
     plt.title(f'{API_URL}   | top 50 offers from 1st page')
     plt.xlabel(f'updates every minute, last update: {now:%Y %b %d %H:%M:%S} MSK')
