@@ -29,6 +29,8 @@ API_URL  = 'https://localbitcoins.net/ru/buy-bitcoins-online/rub'
 MSK = dateutil.tz.gettz('Europe/Moscow')
 DATE_FORMAT = DateFormatter('%H:%M', tz=MSK)
 PRICE_FORMAT = StrMethodFormatter('{x:,.0f}')
+YLIM = 20 # stddev
+
 
 if len(sys.argv) == 2 and sys.argv[1] == 'init':
     assert not DB_PATH.exists()
@@ -61,13 +63,17 @@ while True:
     mean = d.mean(axis=1)
     std  = d.std(axis=1)
 
-    ax = d.interpolate(limit_area='inside').plot(figsize=(16, 10), legend=False, marker='.', linestyle='-', linewidth=0.9)
+    mean_global = d.mean().mean()
+    std_global = d.std().mean()
+
+    ax = d.interpolate(limit_area='inside').plot(figsize=(16, 10), legend=False, marker=None, linestyle='-', linewidth=0.9)
     ax.xaxis.set_major_formatter(DATE_FORMAT)
     ax.yaxis.set_major_formatter(PRICE_FORMAT)
     mean.plot(color='black', marker=',', linestyle='-', linewidth=3)
     plt.fill_between(std.index, mean - std, mean + std, color='grey', alpha=.1, zorder=-1)
+    plt.ylim(mean_global - YLIM * std_global, mean_global + YLIM * std_global)
     plt.grid(lw=0.3)
-    plt.title(f'{API_URL}   (top 50 offers, sorted)')
+    plt.title(f'{API_URL}   | top 50 offers from 1st page')
     plt.xlabel(f'updates every minute, last update: {now:%Y %b %d %H:%M:%S} MSK')
     plt.ylabel('1 BTC price in RUB')
     plt.tight_layout()
@@ -75,7 +81,8 @@ while True:
     fig = ax.get_figure()
     plt.close(fig)
 
-    time.sleep(55)
+    # time.sleep(55)
+    time.sleep(5)
 
 
 
