@@ -2,8 +2,7 @@
 TODO:
 save all, plot only last 48 hours
 maybe use only banks in rubles (check different options)
-maybe save to parquet/pickle/orc /etc /feather
-todo: fix timezone
+fixstddev
 '''
 
 
@@ -16,14 +15,18 @@ import sys
 import time
 import matplotlib.pyplot as plt
 from matplotlib.ticker import StrMethodFormatter
+from matplotlib.dates import DateFormatter
 import matplotlib
+import dateutil
 
 
 
 N_PRICES = 50
 DB_PATH  = Path('prices.pkl')
 API_URL  = 'https://localbitcoins.net/ru/buy-bitcoins-online/rub'
-
+MSK = dateutil.tz.gettz('Europe/Moscow')
+DATE_FORMAT = DateFormatter('%H:%M', tz=MSK)
+PRICE_FORMAT = StrMethodFormatter('{x:,.0f}')
 
 if len(sys.argv) == 2 and sys.argv[1] == 'init':
     assert not DB_PATH.exists()
@@ -51,22 +54,22 @@ def get_prices():
 
 
 while True:
-    db = pd.read_csv(DB_PATH, index_col='datetime')
-    db.index = pd.to_datetime(db.index)
-    now = datetime.datetime.now()
+    db = pd.read_pickle(DB_PATH)
+    now = datetime.datetime.now(tz=MSK)
     print(now)
     db.loc[now] = get_prices()
-    db.to_csv(DB_PATH, index_label='datetime')
+    db.to_pickle(DB_PATH)
 
     mean = db.mean(axis=1)
 
     ax = db.plot(figsize=(16, 10), legend=False, marker=',', linestyle='-', linewidth=0.9)
-    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
-    mean.plot(color='black', marker=',', linestyle='-', linewidth=2)
+    ax.xaxis.set_major_formatter(DATE_FORMAT)
+    ax.yaxis.set_major_formatter(PRICE_FORMAT)
+    mean.plot(color='black', marker=',', linestyle='-', linewidth=3)
     plt.grid(lw=0.3)
-    plt.title(f'updates every minute, last update: {now:%Y %b %d %H:%M:%S} \n')
+    plt.title(f'{API_URL}   (top 50 offers, sorted)')
+    plt.xlabel(f'updates every minute, last update: {now:%Y %b %d %H:%M:%S} MSK')
     plt.ylabel('1 BTC price in RUB')
-    plt.xlabel(f'{API_URL}   (top 50 offers, sorted)')
     plt.tight_layout()
     ax.figure.savefig('prices.png')
     fig = ax.get_figure()
